@@ -15,31 +15,36 @@ struct SearchBarView<Content: View>: UIViewControllerRepresentable {
     @Binding var text: String
     
     var placeholder: String = ""
+    var onTextChange: ((String) -> Void)? = nil
     @ViewBuilder var content: () -> Content
 
     class Coordinator: NSObject, UISearchResultsUpdating, UISearchControllerDelegate, UISearchBarDelegate {
 
         @Binding var text: String
+        var onTextChange: ((String) -> Void)?
 
-        init(text: Binding<String>) {
+        init(text: Binding<String>, onTextChange: ((String) -> Void)?) {
             _text = text
+            self.onTextChange = onTextChange
         }
         
         func updateSearchResults(for searchController: UISearchController) {
-            if( self.text != searchController.searchBar.text ) {
-                self.text = searchController.searchBar.text ?? ""
+            let newText = searchController.searchBar.text ?? ""
+            if self.text != newText {
+                self.text = newText
+                onTextChange?(newText)
             }
         }
         
         func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         }
-
+        
         func searchBarTextDidEndEditing(_ searchBar: UISearchBar) {
         }
     }
 
     func makeCoordinator() -> SearchBarView.Coordinator {
-        return Coordinator(text: $text)
+        return Coordinator(text: $text, onTextChange: onTextChange)
     }
 
     func makeUIViewController(context: UIViewControllerRepresentableContext<SearchBarView>) -> UIViewControllerType {
@@ -56,13 +61,10 @@ struct SearchBarView<Content: View>: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIViewControllerType, context: UIViewControllerRepresentableContext<SearchBarView>) {
-        
-        if let vc = uiViewController.children.first as? UISearchContainerViewController {
-            if let searchResultController = vc.searchController.searchResultsController, let host = searchResultController as? UIHostingController<Content> {
-                
-                host.rootView = content()
-            }
-        }
+        // Intentionally not reassigning host.rootView here:
+        // the hosted SwiftUI view observes its environment / view-model and
+        // updates itself. Reassigning on every parent update causes the grid
+        // to fully re-render and the tvOS focus engine to lose its place.
     }
 }
 

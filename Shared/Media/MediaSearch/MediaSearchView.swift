@@ -26,67 +26,68 @@ struct MediaSearchContentView: View {
     
     @State private var isLoading = true
     
-    private let columns = [
-        GridItem(.flexible(), spacing: 40),
-        GridItem(.flexible(), spacing: 40),
-        GridItem(.flexible(), spacing: 40)
-    ]
+    private let columnsCount = 3
+
+    private var rows: [[Media]] {
+        stride(from: 0, to: viewModel.newMedias.count, by: columnsCount).map { start in
+            Array(viewModel.newMedias[start..<min(start + columnsCount, viewModel.newMedias.count)])
+        }
+    }
 
     var body: some View {
         Group {
-            NavigationView {
-                ScrollView {
-                    if let elements = viewModel.subCategories {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 22) {
-                                ForEach(elements) { element in
-                                    Button {
-                                        // currently disabled - subcategory switching not wired for search
-                                    } label: {
-                                        PillChip(
-                                            icon: element == viewModel.selectedSubCategory ? "checkmark" : nil,
-                                            title: element.name,
-                                            isSelected: element == viewModel.selectedSubCategory
-                                        )
-                                    }
-                                    .buttonStyle(PillButtonStyle(isSelected: element == viewModel.selectedSubCategory))
-                                }
-                            }
-                            .padding(.horizontal, 60)
-                            .padding(.top, 24)
-                            .padding(.bottom, 36)
-                        }
-                    }
-                    LazyVGrid(columns: columns, spacing: 40) {
-                        ForEach(viewModel.newMedias) { media in
-                            NavigationLink {
-                                DetailedMediaItemView(viewModel: DetailedMediaItemViewModel(media: media), bookmarkViewModel: bookmarkViewModel)
-                            } label: {
-                                MediaItemViewView(media: media, bookmarkViewModel: bookmarkViewModel)
-                                    .frame(width: MediaItemViewView.coverSize.width, height: MediaItemViewView.coverSize.height)
-                            }
-#if os(tvOS)
-                            .buttonStyle(.card)
-#else
-                            .buttonStyle(.bordered)
-#endif
-                            .contextMenu {
+            ScrollView {
+                if let elements = viewModel.subCategories {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 22) {
+                            ForEach(elements) { element in
                                 Button {
-                                    bookmarkViewModel.toggleBookmark(for: media)
+                                    // currently disabled - subcategory switching not wired for search
                                 } label: {
-                                    Text(bookmarkViewModel.bookMarkTitle(for: media))
+                                    PillChip(
+                                        icon: element == viewModel.selectedSubCategory ? "checkmark" : nil,
+                                        title: element.name,
+                                        isSelected: element == viewModel.selectedSubCategory
+                                    )
                                 }
+                                .buttonStyle(PillButtonStyle(isSelected: element == viewModel.selectedSubCategory))
                             }
                         }
-                    }
-                    .padding()
-
-                    if !viewModel.newMedias.isEmpty {
-                        Color.clear
-                            .frame(height: 1)
-                            .onAppear { loadMoreTask() }
+                        .padding(.horizontal, 60)
+                        .padding(.top, 24)
+                        .padding(.bottom, 36)
                     }
                 }
+                VStack(spacing: 40) {
+                    ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                        HStack(spacing: 40) {
+                            ForEach(row) { media in
+                                NavigationLink {
+                                    DetailedMediaItemView(viewModel: DetailedMediaItemViewModel(media: media), bookmarkViewModel: bookmarkViewModel)
+                                } label: {
+                                    MediaItemViewView(media: media, bookmarkViewModel: bookmarkViewModel)
+                                        .frame(width: MediaItemViewView.coverSize.width, height: MediaItemViewView.coverSize.height)
+                                }
+#if os(tvOS)
+                                .buttonStyle(.card)
+#else
+                                .buttonStyle(.bordered)
+#endif
+                                .contextMenu {
+                                    Button {
+                                        bookmarkViewModel.toggleBookmark(for: media)
+                                    } label: {
+                                        Text(bookmarkViewModel.bookMarkTitle(for: media))
+                                    }
+                                }
+                            }
+                            if row.count < columnsCount {
+                                Spacer()
+                            }
+                        }
+                    }
+                }
+                .padding()
             }
             .overlay(overlayView)
             .task {
@@ -124,11 +125,6 @@ struct MediaSearchContentView: View {
         }
     }
     
-    private func loadMoreTask() {
-        Task {
-            await viewModel.loadMore()
-        }
-    }
 }
 
 struct MediaSearchView_Previews: PreviewProvider {

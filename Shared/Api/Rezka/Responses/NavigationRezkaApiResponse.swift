@@ -16,6 +16,16 @@ struct NavigationRezkaApiResponse: Decodable {
         let items = try doc.body()?.getElementById("topnav-menu")?.getElementsByClass("b-topnav__item")
         let filtersElement = try doc.body()?.getElementById("main")?.getElementsByClass("b-content__main_filters").first
         
+        var filterItems = [SubCategoryList]()
+        try filtersElement?.getElementsByClass("b-content__main_filters_item").forEach({ sub in
+            let aTag = try sub.getElementsByTag("a")
+            let title = try aTag.text()
+            let uri = String(try aTag.attr("href").split(separator: "/").last ?? "")
+            if !title.lowercased().contains("последн") {
+                filterItems.append(SubCategoryList(name: title, uri: uri))
+            }
+        })
+        
         var categories: [CategoryList] = []
         
         try items?.forEach({ item in
@@ -26,20 +36,15 @@ struct NavigationRezkaApiResponse: Decodable {
             
             let typeString = try titleElementTag?.attr("href") ?? ""
             let title = try titleElementTag?.text() ?? ""
+            let type = Category(rawValue: typeString.letters) ?? .none
             
             let mainSubCategories = try subCategoriesElement?.getElementsByClass("left").first?.getElementsByTag("li")
             let additionalSubCategories = try subCategoriesElement?.getElementsByClass("right").first?.getElementsByTag("li")
-            let filterCategories = try filtersElement?.getElementsByClass("b-content__main_filters_item")
-            
             var subCategories = [SubCategoryList]()
             
-            try filterCategories?.forEach({ sub in
-                let aTag = try sub.getElementsByTag("a")
-                let title = try aTag.text()
-                let uri = String(try aTag.attr("href").split(separator: "/").last ?? "")
-                
-                subCategories.append(SubCategoryList(name: title, uri: uri))
-            })
+            if type == .films {
+                subCategories.append(contentsOf: filterItems)
+            }
             
             try mainSubCategories?.forEach({ sub in
                 let aTag = try sub.getElementsByTag("a")
@@ -57,7 +62,6 @@ struct NavigationRezkaApiResponse: Decodable {
                 subCategories.append(SubCategoryList(name: title, uri: uri))
             })
             
-            let type = Category(rawValue: typeString.letters) ?? .none
             assert(type != .none, "new category: \(typeString)")
             
             let categoryList = CategoryList(type: type, items: subCategories, name: title, iconName: "")
@@ -65,6 +69,9 @@ struct NavigationRezkaApiResponse: Decodable {
             categories.append(categoryList)
         })
         
+        guard categories.count >= 3 else {
+            throw DataError.generate(for: .navigationRezkaApi, error: .bad)
+        }
         categories = categories.dropLast(2)
         let element = categories.remove(at: categories.count - 1)
         categories.insert(element, at: 0)

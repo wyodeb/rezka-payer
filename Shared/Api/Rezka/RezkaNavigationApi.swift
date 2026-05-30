@@ -26,7 +26,7 @@ struct NavigationRezkaApi {
         
         switch response.statusCode {
             
-        case (200...299), (400...499):
+        case (200...299):
             let html = String(decoding: data, as: UTF8.self)
             guard !html.isEmpty else {
                 throw DataError.generate(for: .navigationRezkaApi, error: .empty)
@@ -34,7 +34,11 @@ struct NavigationRezkaApi {
             
             return try NavigationRezkaApiResponse(from: html).categories
         default:
-            throw DataError.generate(for: .navigationRezkaApi, error: .server)
+            throw NSError(
+                domain: ApiConstants.Domains.navigationRezkaApi.rawValue,
+                code: response.statusCode,
+                userInfo: [NSLocalizedDescriptionKey: "Server returned HTTP \(response.statusCode)"]
+            )
         }
     }
     

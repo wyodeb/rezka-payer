@@ -40,7 +40,7 @@ struct ApiConstants {
     
     
     static let userAgentKey = "User-Agent"
-    static let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15"
+    static let userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
     
     static let AcceptTypeKey = "Accept"
     static let AcceptTypeJson = "application/json"

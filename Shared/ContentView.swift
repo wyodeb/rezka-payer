@@ -31,10 +31,21 @@ struct ContentView: View {
 #if os(tvOS)
         ZStack {
             RezkaBackground()
-            HomeTabView(categories: viewModel.categories)
-                .overlay(overlayView)
-                .task { refreshTask() }
+            switch viewModel.phase {
+            case .fetching, .fetchingNextPage:
+                RezkaProgress()
+            case .failure(let error):
+                TabView {
+                    RetryView(text: error.localizedDescription, retryAction: refreshTask)
+                        .tabItem { Label("Home", systemImage: "house") }
+                    SettingsView()
+                        .tabItem { Label("Settings", systemImage: "gearshape") }
+                }
+            default:
+                HomeTabView(categories: viewModel.categories)
+            }
         }
+        .task { refreshTask() }
 #else
         Group {
             if horizontalSizeClass == .regular {

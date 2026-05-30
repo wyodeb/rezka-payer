@@ -17,7 +17,7 @@ class ContentViewModel: ObservableObject {
     
     private let cache: DiskCache<[CategoryList]> = .init(filename: "navigationcache", expirationInterval: 5 * 60)
     
-    private static let hiddenCategoryTypes: Set<Category> = [.animation, .new]
+    private static let hiddenCategoryTypes: Set<Category> = [.new, .cartoons]
 
     var categories: [CategoryList] {
         (phase.value ?? []).filter { !Self.hiddenCategoryTypes.contains($0.type) }
@@ -27,11 +27,11 @@ class ContentViewModel: ObservableObject {
         if Task.isCancelled { return }
         if let categories = await cache.value(forKey: "categories_list") {
             phase = .success(categories)
+            await loadNavigation()
+        } else {
+            phase = .fetching
+            await loadNavigation()
         }
-        
-        phase = .fetching
-        
-        await loadNavigation()
     }
     
     private func loadNavigation() async {

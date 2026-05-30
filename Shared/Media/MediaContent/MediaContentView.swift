@@ -16,6 +16,7 @@ struct MediaContentView: View {
     @Namespace private var scrollViewNameSpace
     
     @State private var isLoading = true
+    @State private var didTriggerLoadMore = false
     
     private let columns = [
         GridItem(.flexible(), spacing: 40),
@@ -76,7 +77,11 @@ struct MediaContentView: View {
                     if !viewModel.newMedias.isEmpty {
                         Color.clear
                             .frame(height: 1)
-                            .onAppear { loadMoreTask() }
+                            .onAppear {
+                                guard !didTriggerLoadMore else { return }
+                                didTriggerLoadMore = true
+                                loadMoreTask()
+                            }
                     }
                 }
             }

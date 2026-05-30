@@ -60,7 +60,6 @@ struct PlayerViewController: Representable {
                 if wasPlaying { player.play() }
             }
 
-            observePlaybackEnd()
             rebuildMenus()
             Task { @MainActor [weak self] in
                 await self?.refreshAudioOptions()
@@ -255,7 +254,17 @@ struct PlayerViewController: Representable {
         if let player = initialPlayer() {
             controller.player = player
             context.coordinator.lastStreamURL = videoURL?.absoluteString ?? ""
-            controller.player?.play()
+
+            if let vm = viewModel,
+               let entry = WatchHistoryViewModel.shared.entry(for: vm.media),
+               entry.currentTime > 0 {
+                let resumeTime = CMTime(seconds: entry.currentTime, preferredTimescale: 600)
+                player.seek(to: resumeTime, toleranceBefore: .zero, toleranceAfter: .zero) { _ in
+                    player.play()
+                }
+            } else {
+                player.play()
+            }
         } else {
             print("⚠️ PlayerViewController: no video URL — skipping playback.")
         }
@@ -288,6 +297,26 @@ struct PlayerViewController: Representable {
                     context.coordinator.rebuildMenus()
                 }
             }
+        }
+#endif
+    }
+
+    static func dismantleUIViewController(_ playerController: NSViewControllerType, coordinator: Coordinator) {
+#if !os(macOS)
+        guard let player = coordinator.avController?.player,
+              let vm = coordinator.viewModel else { return }
+        let currentTime = player.currentTime().seconds
+        let duration = player.currentItem?.duration.seconds ?? 0
+        guard currentTime.isFinite, duration.isFinite, duration > 0 else { return }
+        Task { @MainActor in
+            WatchHistoryViewModel.shared.update(
+                media: vm.media,
+                currentTime: currentTime,
+                duration: duration,
+                season: vm.currentSeason,
+                episode: vm.currentEpisode,
+                translationId: vm.currentTranslation
+            )
         }
 #endif
     }

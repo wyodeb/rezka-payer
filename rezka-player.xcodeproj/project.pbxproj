@@ -13,6 +13,8 @@
 		A50D8FE028ABF7E4008C66AA /* MediaSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50D8FDD28ABF7E4008C66AA /* MediaSearchView.swift */; };
 		A50D8FE828ABF838008C66AA /* rezka-player--InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A50D8FE228ABF838008C66AA /* rezka-player--InfoPlist.strings */; };
 		A50D8FF028ABF9A3008C66AA /* MediaHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50D8FED28ABF9A3008C66AA /* MediaHistoryView.swift */; };
+		B1WH000000000001 /* WatchHistoryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1WH000000000002 /* WatchHistoryEntry.swift */; };
+		B1WH000000000003 /* WatchHistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1WH000000000004 /* WatchHistoryViewModel.swift */; };
 		A559FEA629117EEE0004380B /* PlayerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A559FEA329117EEE0004380B /* PlayerViewController.swift */; };
 		A57D2DB228AEB11600E98298 /* MediaItemViewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A57D2DAF28AEB11600E98298 /* MediaItemViewView.swift */; };
 		A57D2DB628AEB2CD00E98298 /* Media.swift in Sources */ = {isa = PBXBuildFile; fileRef = A57D2DB328AEB2CD00E98298 /* Media.swift */; };
@@ -131,6 +133,8 @@
 		A5AUT11151AA00000000001 /* RezkaAuthApi.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RezkaAuthApi.swift; sourceTree = "<group>"; };
 		A5THM11151AA00000000001 /* RezkaTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RezkaTheme.swift; sourceTree = "<group>"; };
 		A5HTV11151AA00000000001 /* HomeTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeTabView.swift; sourceTree = "<group>"; };
+		B1WH000000000002 /* WatchHistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHistoryEntry.swift; sourceTree = "<group>"; };
+		B1WH000000000004 /* WatchHistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHistoryViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -194,6 +198,8 @@
 		A50D8FEC28ABF990008C66AA /* MediaHistory */ = {
 			isa = PBXGroup;
 			children = (
+				B1WH000000000002 /* WatchHistoryEntry.swift */,
+				B1WH000000000004 /* WatchHistoryViewModel.swift */,
 				A50D8FED28ABF9A3008C66AA /* MediaHistoryView.swift */,
 			);
 			path = MediaHistory;
@@ -527,6 +533,8 @@
 				A5A741BE2902DBCD00B884F7 /* CategoryView.swift in Sources */,
 				A5A741DF2902EB3E00B884F7 /* Strings+Filter.swift in Sources */,
 				A50D8FF028ABF9A3008C66AA /* MediaHistoryView.swift in Sources */,
+				B1WH000000000001 /* WatchHistoryEntry.swift in Sources */,
+				B1WH000000000003 /* WatchHistoryViewModel.swift in Sources */,
 				A5F6AB64291D68DE001D21FA /* MediaSearchContentViewModel.swift in Sources */,
 				A50D8FE028ABF7E4008C66AA /* MediaSearchView.swift in Sources */,
 				A50D8FD128ABF5E7008C66AA /* MediaContentView.swift in Sources */,

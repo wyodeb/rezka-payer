@@ -119,6 +119,7 @@ struct SettingsView: View {
 #if !os(tvOS)
         .scrollContentBackground(.hidden)
 #endif
+        .listStyle(.grouped)
         .onAppear {
             draft = baseURL
             if isSignedIn, emailInput.isEmpty {

@@ -116,14 +116,18 @@ class DetailedMediaItemViewModel: ObservableObject {
                 return
             }
             
+            let savedEntry = WatchHistoryViewModel.shared.entry(for: media)
+
             if media.isSeries {
-                currentSeason = 1
-                currentEpisode = 1
+                currentSeason = savedEntry?.season ?? 1
+                currentEpisode = savedEntry?.episode ?? 1
             }
 
             phase = .success(detailedMedia)
 
-            try? await setCurrentTranslation(id: currentTranslationId, mediaId: detailedMedia.mediaId)
+            let translationToUse = savedEntry?.translationId ?? currentTranslationId
+            let resolvedTranslation = detailedMedia.translations.keys.contains(translationToUse) ? translationToUse : currentTranslationId
+            try? await setCurrentTranslation(id: resolvedTranslation, mediaId: detailedMedia.mediaId)
 
             await cache.setValue([detailedMedia], forKey: "detailed_media_\(media.id)")
             try? await cache.saveToDisk()
