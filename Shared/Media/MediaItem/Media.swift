@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CryptoKit
 
 let activityTypeViewKey = "com.rezka-player.media.view"
 let activityURLKey = "media.url.key"
@@ -19,9 +20,19 @@ struct Media {
         case p360 = "360p"
         case unknown
     }
-    
-    var id = UUID()
-    
+
+    /// Derived from `url` rather than random, so the same title parsed from two
+    /// different listings (search vs. category vs. history) resolves to the same
+    /// identity — watch history, bookmarks, and Rezka-account sync all match on this.
+    var id: UUID {
+        let digest = SHA256.hash(data: Data(url.utf8))
+        let bytes = Array(digest.prefix(16))
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
+    }
+
     let title: String
     let url: String
     let descriptionShort: String
@@ -67,6 +78,16 @@ extension Media {
         return Media.blockedCountryTokens.contains { token in
             haystack.contains(token.lowercased())
         }
+    }
+}
+
+extension Media {
+    /// HD Rezka's own numeric post id, e.g. "1843" out of ".../1843-griffiny-1999-latest.html".
+    /// This is the `post_id` their account-sync endpoints (send_save, continue-watching) key on.
+    var rezkaMediaId: Int? {
+        guard let parsedURL = URL(string: url) else { return nil }
+        let digits = parsedURL.lastPathComponent.prefix { $0.isNumber }
+        return digits.isEmpty ? nil : Int(digits)
     }
 }
 

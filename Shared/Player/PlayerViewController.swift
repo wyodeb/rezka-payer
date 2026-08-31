@@ -22,7 +22,8 @@ struct PlayerViewController: Representable {
     var videoURL: URL?
     var viewModel: DetailedMediaItemViewModel?
 
-    final class Coordinator {
+    @MainActor
+    final class Coordinator: Sendable {
         var viewModel: DetailedMediaItemViewModel?
         weak var avController: AVPlayerViewController?
         var lastStreamURL: String = ""
@@ -86,13 +87,26 @@ struct PlayerViewController: Representable {
 
         @MainActor
         private func advanceAndPlayNext() async {
-            guard let vm = viewModel, vm.hasNextEpisode else { return }
+            guard let vm = viewModel else { return }
+
+            if !vm.hasNextEpisode {
+                WatchHistoryViewModel.shared.remove(media: vm.media)
+                return
+            }
+
             do {
                 let advanced = try await vm.advanceToNextEpisode()
                 guard advanced,
                       !vm.stream.isEmpty,
                       let url = URL(string: vm.stream),
                       let player = avController?.player else { return }
+
+                WatchHistoryViewModel.shared.advanceEpisode(
+                    media: vm.media,
+                    season: vm.currentSeason ?? 1,
+                    episode: vm.currentEpisode ?? 1,
+                    translationId: vm.currentTranslation
+                )
 
                 lastStreamURL = vm.stream
                 let item = AVPlayerItem(url: url)
@@ -315,7 +329,8 @@ struct PlayerViewController: Representable {
                 duration: duration,
                 season: vm.currentSeason,
                 episode: vm.currentEpisode,
-                translationId: vm.currentTranslation
+                translationId: vm.currentTranslation,
+                nextEpisodeTarget: vm.nextEpisodeIdentifier
             )
         }
 #endif

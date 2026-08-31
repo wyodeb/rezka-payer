@@ -9,11 +9,19 @@ struct WatchHistoryEntry: Codable, Equatable, Identifiable {
     var episode: Int?
     var translationId: Int?
 
+    /// The id of this entry on the signed-in Rezka account's "Досмотреть" (continue
+    /// watching) list, once known — lets us delete it there too, not just locally.
+    var remoteSaveId: Int? = nil
+
     var id: UUID { media.id }
 
     var progress: Double {
         guard duration > 0 else { return 0 }
         return min(currentTime / duration, 1.0)
+    }
+
+    var isFinished: Bool {
+        progress >= 0.95
     }
 
     var timeLeftFormatted: String {

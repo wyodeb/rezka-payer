@@ -81,13 +81,15 @@ struct PillChip: View {
 
 struct PillButtonStyle: ButtonStyle {
     var isSelected: Bool = false
+    var isDestructive: Bool = false
 
     func makeBody(configuration: Configuration) -> some View {
-        PillBody(isSelected: isSelected, configuration: configuration)
+        PillBody(isSelected: isSelected, isDestructive: isDestructive, configuration: configuration)
     }
 
     private struct PillBody: View {
         let isSelected: Bool
+        let isDestructive: Bool
         let configuration: PillButtonStyle.Configuration
         @Environment(\.isFocused) private var isFocused
 
@@ -117,22 +119,23 @@ struct PillButtonStyle: ButtonStyle {
         }
 
         private var foregroundColor: Color {
-            if isFocused || isSelected { return RezkaPalette.onLight }
-            return RezkaPalette.primaryText
+            if isFocused || isSelected { return isDestructive ? .white : RezkaPalette.onLight }
+            return isDestructive ? Color.red.opacity(0.85) : RezkaPalette.primaryText
         }
 
         private var backgroundStyle: AnyShapeStyle {
-            if isFocused || isSelected { return AnyShapeStyle(Color.white) }
+            if isFocused || isSelected { return AnyShapeStyle(isDestructive ? Color.red : Color.white) }
             return AnyShapeStyle(RezkaPalette.surface)
         }
 
         private var strokeColor: Color {
             if isFocused || isSelected { return .clear }
-            return RezkaPalette.surfaceStroke
+            return isDestructive ? Color.red.opacity(0.35) : RezkaPalette.surfaceStroke
         }
 
         private var shadowColor: Color {
-            isFocused ? Color.black.opacity(0.55) : .clear
+            guard isFocused else { return .clear }
+            return isDestructive ? Color.red.opacity(0.45) : Color.black.opacity(0.55)
         }
     }
 }

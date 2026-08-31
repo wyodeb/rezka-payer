@@ -199,6 +199,13 @@ class DetailedMediaItemViewModel: ObservableObject {
         nextEpisodeTarget() != nil
     }
 
+    /// Season/episode of what comes after the currently-selected episode, if any —
+    /// exposed so callers (e.g. saving watch history on player dismiss) can advance
+    /// or strip a finished entry without duplicating season/episode-list traversal.
+    var nextEpisodeIdentifier: (season: Int, episode: Int)? {
+        nextEpisodeTarget().map { (season: $0.season, episode: $0.episodeId) }
+    }
+
     @discardableResult
     func advanceToNextEpisode() async throws -> Bool {
         guard let target = nextEpisodeTarget() else { return false }

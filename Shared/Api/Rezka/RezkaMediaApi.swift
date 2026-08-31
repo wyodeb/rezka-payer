@@ -9,8 +9,6 @@ import Foundation
 
 struct MediaRezkaApi {
 
-    private let session = URLSession.shared
-    
     func fetch(from category: Category, subCategory: SubCategoryList?, page: Int = 1) async throws -> [Media] {
         try await fetchMedias(from: generateNewMediaURL(from: category, subCategory: subCategory, page: page))
     }
@@ -39,8 +37,8 @@ struct MediaRezkaApi {
     
     func stream(mediaId: Int, translationId: Int, season: Int?, episode: Int?) async throws -> StreamMedia {
         let request = streamRequest(mediaId: mediaId, translationId: translationId, season: season, episode: episode)
-        
-        let (data, response) = try await session.data(for: request)
+
+        let (data, response) = try await RezkaHTTPClient.shared.send(request)
         
         guard let response = response as? HTTPURLResponse else {
             throw DataError.generate(for: .rezkaConstantsApi, error: .bad)
@@ -66,8 +64,8 @@ struct MediaRezkaApi {
     
     private func fetchMedias(from url: URL) async throws -> [Media] {
         let request = request(for: url)
-        
-        let (data, response) = try await session.data(for: request)
+
+        let (data, response) = try await RezkaHTTPClient.shared.send(request)
         
         guard let response = response as? HTTPURLResponse else {
             throw DataError.generate(for: .rezkaConstantsApi, error: .bad)
@@ -89,8 +87,8 @@ struct MediaRezkaApi {
     
     private func fetchMedia(from url: URL) async throws -> DetailedMedia {
         let request = request(for: url)
-        
-        let (data, response) = try await session.data(for: request)
+
+        let (data, response) = try await RezkaHTTPClient.shared.send(request)
         
         guard let response = response as? HTTPURLResponse else {
             throw DataError.generate(for:. rezkaConstantsApi, error: .bad)
@@ -112,8 +110,8 @@ struct MediaRezkaApi {
     
     private func fetchSeasons(mediaId: Int, translationId: Int) async throws -> SeasonsData {
         let request = seasonsRequest(mediaId: mediaId, translationId: translationId)
-        
-        let (data, response) = try await session.data(for: request)
+
+        let (data, response) = try await RezkaHTTPClient.shared.send(request)
         
         guard let response = response as? HTTPURLResponse else {
             throw DataError.generate(for: .rezkaConstantsApi, error: .bad)

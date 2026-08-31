@@ -5,26 +5,35 @@
 //  Created by Vitalii Parovishnyk on 21.08.2022.
 //
 
-import Foundation
-
 import SwiftUI
 
 struct EmptyPlaceholderView: View {
-    
+
     let text: String
     let image: Image?
-    
+    var caption: String? = nil
+
     var body: some View {
-        VStack(spacing: 8) {
-            Spacer()
-            if let image = self.image {
+        VStack(spacing: 16) {
+            if let image {
                 image
-                    .imageScale(.large)
-                    .font(.system(size: 52))
+                    .font(.system(size: 48))
+                    .foregroundStyle(RezkaPalette.tertiaryText)
             }
+
             Text(text)
-            Spacer()
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(RezkaPalette.secondaryText)
+
+            if let caption {
+                Text(caption)
+                    .font(.callout)
+                    .foregroundStyle(RezkaPalette.tertiaryText)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 500)
+            }
         }
+        .padding(40)
     }
 }
 

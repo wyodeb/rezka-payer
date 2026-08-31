@@ -18,7 +18,7 @@ struct HomeTabView: View {
                 .tabItem {
                     Label("Watching", systemImage: "play.circle")
                 }
-            ForEach(categories, id: \.type) { category in
+            ForEach(categories.filter { $0.type != .animation }, id: \.type) { category in
                 tabContent(for: category)
                     .tabItem {
                         Label(tabTitle(for: category), systemImage: category.iconName)
@@ -50,7 +50,7 @@ struct HomeTabView: View {
 
     private func tabTitle(for cat: CategoryList) -> String {
         if cat.type == .search { return "Search" }
-        return cat.name
+        return cat.type.text
     }
 }
 

@@ -9,16 +9,14 @@ import Foundation
 
 struct NavigationRezkaApi {
 
-    private let session = URLSession.shared
-    
     func fetch() async throws -> [CategoryList] {
         try await fetchNavigation(from: generateNavigationUrl())
     }
-    
+
     private func fetchNavigation(from url: URL) async throws -> [CategoryList] {
         let request = request(for: url)
-        
-        let (data, response) = try await session.data(for: request)
+
+        let (data, response) = try await RezkaHTTPClient.shared.send(request)
         
         guard let response = response as? HTTPURLResponse else {
             throw DataError.generate(for: .navigationRezkaApi, error: .bad)

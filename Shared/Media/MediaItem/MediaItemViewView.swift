@@ -19,6 +19,13 @@ struct MediaItemViewView: View {
     let media: Media
     @StateObject var bookmarkViewModel: MediaBookmarksViewModel
 
+    /// Watch progress (0...1). When set, a thin progress bar is drawn at the
+    /// bottom of the card and, if `episodeLabelOverride` is also set, that
+    /// replaces the generic series-info chip — used by the Watching tab so
+    /// its cards share this exact layout instead of a bespoke one.
+    var progress: Double? = nil
+    var episodeLabelOverride: String? = nil
+
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .bottomLeading) {
@@ -44,7 +51,7 @@ struct MediaItemViewView: View {
                         HStack(spacing: 8) {
                             media.category.icon
                                 .font(.caption.weight(.semibold))
-                            Text(media.category.rawValue)
+                            Text(media.category.text)
                                 .font(.caption.weight(.semibold))
                                 .lineLimit(1)
                         }
@@ -60,7 +67,22 @@ struct MediaItemViewView: View {
                                 .stroke(.white.opacity(0.18), lineWidth: 1)
                         )
 
-                        if media.isSeries, let seriesInfo = media.seriesInfo {
+                        if let episodeLabelOverride {
+                            Text(episodeLabelOverride)
+                                .font(.caption.weight(.medium))
+                                .lineLimit(1)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .foregroundStyle(.white)
+                                .background(
+                                    Capsule()
+                                        .fill(.ultraThinMaterial)
+                                )
+                                .overlay(
+                                    Capsule()
+                                        .stroke(.white.opacity(0.18), lineWidth: 1)
+                                )
+                        } else if media.isSeries, let seriesInfo = media.seriesInfo {
                             Text(seriesInfo)
                                 .font(.caption.weight(.medium))
                                 .lineLimit(1)
@@ -100,6 +122,17 @@ struct MediaItemViewView: View {
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.78))
                             .lineLimit(2)
+                    }
+
+                    if let progress {
+                        GeometryReader { barProxy in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Color.white.opacity(0.25))
+                                Capsule().fill(Color.white)
+                                    .frame(width: barProxy.size.width * max(0, min(progress, 1)))
+                            }
+                        }
+                        .frame(height: 4)
                     }
                 }
                 .padding(.horizontal, 22)

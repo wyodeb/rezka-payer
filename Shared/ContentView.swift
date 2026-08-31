@@ -15,6 +15,7 @@ struct ContentView: View {
     
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @StateObject private var viewModel = ContentViewModel()
+    @StateObject private var historyViewModel = WatchHistoryViewModel.shared
     
     @State var selectedCategory: CategoryList?
     
@@ -43,6 +44,14 @@ struct ContentView: View {
                 }
             default:
                 HomeTabView(categories: viewModel.categories)
+            }
+        }
+        .fullScreenCover(item: $historyViewModel.pendingDeepLinkMedia) { media in
+            NavigationStack {
+                DetailedMediaItemView(
+                    viewModel: DetailedMediaItemViewModel(media: media),
+                    bookmarkViewModel: MediaBookmarksViewModel.shared
+                )
             }
         }
         .task { refreshTask() }

@@ -18,24 +18,18 @@ struct MediaSearchView: View {
 
 struct MediaSearchContentView: View {
     @EnvironmentObject var viewModel: MediaSearchContentViewModel
-    
-    @StateObject private var bookmarkViewModel = MediaBookmarksViewModel.shared
-    
-    @State private var scrollViewHeight = CGFloat.infinity
-    @Namespace private var scrollViewNameSpace
-    
-    @State private var isLoading = true
-    
-    private let columnsCount = 3
 
-    private var rows: [[Media]] {
-        stride(from: 0, to: viewModel.newMedias.count, by: columnsCount).map { start in
-            Array(viewModel.newMedias[start..<min(start + columnsCount, viewModel.newMedias.count)])
-        }
-    }
+    @StateObject private var bookmarkViewModel = MediaBookmarksViewModel.shared
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 40),
+        GridItem(.flexible(), spacing: 40),
+        GridItem(.flexible(), spacing: 40)
+    ]
 
     var body: some View {
-        Group {
+        ZStack {
+            RezkaBackground()
             ScrollView {
                 if let elements = viewModel.subCategories {
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -58,31 +52,24 @@ struct MediaSearchContentView: View {
                         .padding(.bottom, 36)
                     }
                 }
-                VStack(spacing: 40) {
-                    ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                        HStack(spacing: 40) {
-                            ForEach(row) { media in
-                                NavigationLink {
-                                    DetailedMediaItemView(viewModel: DetailedMediaItemViewModel(media: media), bookmarkViewModel: bookmarkViewModel)
-                                } label: {
-                                    MediaItemViewView(media: media, bookmarkViewModel: bookmarkViewModel)
-                                        .frame(width: MediaItemViewView.coverSize.width, height: MediaItemViewView.coverSize.height)
-                                }
+                LazyVGrid(columns: columns, spacing: 40) {
+                    ForEach(viewModel.newMedias) { media in
+                        NavigationLink {
+                            DetailedMediaItemView(viewModel: DetailedMediaItemViewModel(media: media), bookmarkViewModel: bookmarkViewModel)
+                        } label: {
+                            MediaItemViewView(media: media, bookmarkViewModel: bookmarkViewModel)
+                                .frame(width: MediaItemViewView.coverSize.width, height: MediaItemViewView.coverSize.height)
+                        }
 #if os(tvOS)
-                                .buttonStyle(.card)
+                        .buttonStyle(.card)
 #else
-                                .buttonStyle(.bordered)
+                        .buttonStyle(.bordered)
 #endif
-                                .contextMenu {
-                                    Button {
-                                        bookmarkViewModel.toggleBookmark(for: media)
-                                    } label: {
-                                        Text(bookmarkViewModel.bookMarkTitle(for: media))
-                                    }
-                                }
-                            }
-                            if row.count < columnsCount {
-                                Spacer()
+                        .contextMenu {
+                            Button {
+                                bookmarkViewModel.toggleBookmark(for: media)
+                            } label: {
+                                Text(bookmarkViewModel.bookMarkTitle(for: media))
                             }
                         }
                     }
@@ -98,7 +85,7 @@ struct MediaSearchContentView: View {
 #endif
         }
     }
-    
+
     @ViewBuilder
     private var overlayView: some View {
         switch viewModel.phase {
@@ -107,24 +94,36 @@ struct MediaSearchContentView: View {
         case .fetchingNextPage:
             progress
         case .success(let medias) where medias.isEmpty:
-            EmptyPlaceholderView(text: "No Medias", image: nil)
+            if let query = viewModel.currentSearchText, !query.isEmpty {
+                EmptyPlaceholderView(
+                    text: "No results",
+                    image: Image(systemName: "magnifyingglass"),
+                    caption: "Nothing found for \u{201C}\(query)\u{201D}. Try a different title."
+                )
+            } else {
+                EmptyPlaceholderView(
+                    text: "Search HD Rezka",
+                    image: Image(systemName: "magnifyingglass"),
+                    caption: "Find movies, series, and anime by title."
+                )
+            }
         case .failure(let error):
             RetryView(text: error.localizedDescription, retryAction: refreshTask)
         default: EmptyView()
         }
     }
-    
+
     @ViewBuilder
     private var progress: some View {
         RezkaProgress()
     }
-    
+
     private func refreshTask() {
         Task {
             await viewModel.searchMedias()
         }
     }
-    
+
 }
 
 struct MediaSearchView_Previews: PreviewProvider {

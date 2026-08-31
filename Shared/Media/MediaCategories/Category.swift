@@ -20,10 +20,11 @@ enum Category: String, CaseIterable, Codable {
     case collections
     
     var text: String {
-        if self == .general {
-            return "Top Headlines"
+        switch self {
+        case .general: return "Top Headlines"
+        case .films: return "Movies"
+        default: return rawValue.capitalized
         }
-        return rawValue.capitalized
     }
     
     var icon: Image {

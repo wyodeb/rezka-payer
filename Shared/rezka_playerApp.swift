@@ -9,9 +9,16 @@ import SwiftUI
 
 @main
 struct rezka_playerApp: App {
+    init() {
+        RezkaAuthApi.restoreSessionCookies()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onOpenURL { url in
+                    WatchHistoryViewModel.shared.handleDeepLink(url: url)
+                }
         }
     }
 }

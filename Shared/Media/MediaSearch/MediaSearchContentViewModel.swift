@@ -29,6 +29,10 @@ class MediaSearchContentViewModel: ObservableObject {
     var newMedias: [Media] {
         phase.value ?? []
     }
+
+    var currentSearchText: String? {
+        searchText
+    }
     
     init(category: Category = .search, search: String = "") {
         self.category = category

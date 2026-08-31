@@ -28,8 +28,7 @@ struct RezkaAuthApi {
 
     static let isSignedInKey = "rezkaIsSignedIn"
     static let savedEmailKey = "rezkaSavedEmail"
-
-    private let session = URLSession.shared
+    private static let sessionCookiesKey = "rezkaSessionCookies"
 
     func signIn(email: String, password: String) async throws {
         let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -59,7 +58,7 @@ struct RezkaAuthApi {
         request.setValue(RezkaConstantsApi.server, forHTTPHeaderField: "Referer")
         request.setValue("XMLHttpRequest", forHTTPHeaderField: "X-Requested-With")
 
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await RezkaHTTPClient.shared.send(request)
 
         guard let http = response as? HTTPURLResponse else {
             throw RezkaAuthError.badResponse
@@ -74,6 +73,7 @@ struct RezkaAuthApi {
             if decoded.success {
                 UserDefaults.standard.set(true, forKey: RezkaAuthApi.isSignedInKey)
                 UserDefaults.standard.set(trimmedEmail, forKey: RezkaAuthApi.savedEmailKey)
+                RezkaAuthApi.persistSessionCookies()
                 return
             } else {
                 throw RezkaAuthError.server(decoded.message ?? "Login failed.")
@@ -86,6 +86,7 @@ struct RezkaAuthApi {
     func signOut() {
         UserDefaults.standard.set(false, forKey: RezkaAuthApi.isSignedInKey)
         UserDefaults.standard.removeObject(forKey: RezkaAuthApi.savedEmailKey)
+        UserDefaults.standard.removeObject(forKey: RezkaAuthApi.sessionCookiesKey)
 
         guard let host = URL(string: RezkaConstantsApi.server)?.host else { return }
         let storage = HTTPCookieStorage.shared
@@ -100,5 +101,47 @@ struct RezkaAuthApi {
 
     static var savedEmail: String {
         UserDefaults.standard.string(forKey: savedEmailKey) ?? ""
+    }
+
+    /// `HTTPCookieStorage.shared` is not reliably surviving a full app relaunch
+    /// (the PHPSESSID cookie the login response sets has no Max-Age at all, and in
+    /// practice the persistent dle_user_id/dle_password cookies weren't coming back
+    /// either) — so instead of depending on ambient cookie-jar persistence, we snapshot
+    /// the auth cookies ourselves at sign-in and explicitly restore them at launch.
+    static func persistSessionCookies() {
+        guard let host = URL(string: RezkaConstantsApi.server)?.host else { return }
+        let relevant = HTTPCookieStorage.shared.cookies?.filter { domainMatches($0.domain, host: host) } ?? []
+
+        let serialized: [[String: Any]] = relevant.compactMap { cookie in
+            guard let properties = cookie.properties else { return nil }
+            var dict = [String: Any]()
+            for (key, value) in properties {
+                dict[key.rawValue] = value
+            }
+            return dict
+        }
+
+        UserDefaults.standard.set(serialized, forKey: sessionCookiesKey)
+    }
+
+    /// Call once at app launch, before any authenticated request, to restore the
+    /// session saved by `persistSessionCookies()`.
+    static func restoreSessionCookies() {
+        guard let saved = UserDefaults.standard.array(forKey: sessionCookiesKey) as? [[String: Any]] else { return }
+
+        for dict in saved {
+            var properties = [HTTPCookiePropertyKey: Any]()
+            for (key, value) in dict {
+                properties[HTTPCookiePropertyKey(key)] = value
+            }
+            if let cookie = HTTPCookie(properties: properties) {
+                HTTPCookieStorage.shared.setCookie(cookie)
+            }
+        }
+    }
+
+    private static func domainMatches(_ cookieDomain: String, host: String) -> Bool {
+        let trimmed = cookieDomain.hasPrefix(".") ? String(cookieDomain.dropFirst()) : cookieDomain
+        return host == trimmed || host.hasSuffix("." + trimmed)
     }
 }
