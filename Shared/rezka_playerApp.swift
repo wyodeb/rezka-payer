@@ -10,6 +10,7 @@ import SwiftUI
 @main
 struct rezka_playerApp: App {
     init() {
+        RezkaAuthApi.ensureDefaultCookies()
         RezkaAuthApi.restoreSessionCookies()
     }
 

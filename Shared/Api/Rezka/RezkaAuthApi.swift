@@ -140,6 +140,44 @@ struct RezkaAuthApi {
         }
     }
 
+    /// Cookie names that identify a specific signed-in account (as opposed to the
+    /// Anubis anti-bot / `hdmbbs` cookies every client, logged in or not, needs to get
+    /// past the front door at all). Confirmed live: `/ajax/get_cdn_series/` returns a
+    /// `success:true` token that then 404s at the CDN redirect step when these ride
+    /// along on a non-premium account, while the exact same request with only the
+    /// site-access cookies gets a working 302 to an edge node. So the CDN dispatcher —
+    /// not this app — is choosing to treat "logged in, no premium" worse than
+    /// anonymous for at least this account; stream requests should go out without them.
+    private static let sessionIdentityCookieNames: Set<String> = ["dle_user_id", "dle_password", "PHPSESSID", "dle_user_token", "dle_user_taken"]
+
+    /// A `Cookie` header value carrying only the site-access cookies (Anubis auth +
+    /// `hdmbbs`) for `host`, deliberately excluding anything that identifies a signed-in
+    /// account — see `sessionIdentityCookieNames`. Use with `httpShouldHandleCookies =
+    /// false` so URLSession doesn't also attach the full jar (which would defeat this).
+    static func anonymousCookieHeader(forHost host: String) -> String? {
+        let cookies = (HTTPCookieStorage.shared.cookies ?? [])
+            .filter { domainMatches($0.domain, host: host) }
+            .filter { !sessionIdentityCookieNames.contains($0.name) }
+        guard !cookies.isEmpty else { return nil }
+        return cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
+    }
+
+    /// The reference client (github.com/SuperZombi/HdRezkaApi) sends `hdmbbs=1` as a
+    /// default cookie on every single request, unconditionally. Its purpose isn't
+    /// documented, but since it's clearly deliberate there, match it here too rather
+    /// than omit it and risk the server treating us differently for lacking it.
+    static func ensureDefaultCookies() {
+        guard let url = URL(string: RezkaConstantsApi.server), let host = url.host,
+              let cookie = HTTPCookie(properties: [
+                .domain: host,
+                .path: "/",
+                .name: "hdmbbs",
+                .value: "1",
+                .secure: "TRUE"
+              ]) else { return }
+        HTTPCookieStorage.shared.setCookie(cookie)
+    }
+
     private static func domainMatches(_ cookieDomain: String, host: String) -> Bool {
         let trimmed = cookieDomain.hasPrefix(".") ? String(cookieDomain.dropFirst()) : cookieDomain
         return host == trimmed || host.hasSuffix("." + trimmed)

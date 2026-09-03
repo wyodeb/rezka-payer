@@ -15,7 +15,7 @@ struct MediaRezkaApi {
     
     func fetchDetails(from media: Media) async throws -> DetailedMedia {
         var detailedMedia = try await fetchMedia(from: media.mediaURL)
-        guard let currentTranslationId = detailedMedia.translations.keys.first else {
+        guard let currentTranslationId = detailedMedia.preferredTranslationId else {
             throw DataError.generate(for: .rezkaConstantsApi, error: .mapping)
         }
         
@@ -35,8 +35,13 @@ struct MediaRezkaApi {
         try await fetchSeasons(mediaId: mediaId, translationId: translationId)
     }
     
-    func stream(mediaId: Int, translationId: Int, season: Int?, episode: Int?) async throws -> StreamMedia {
-        let request = streamRequest(mediaId: mediaId, translationId: translationId, season: season, episode: episode)
+    /// - Parameter anonymous: strips the signed-in account's identity cookies from
+    ///   this specific request when true — see `streamRequest`'s doc comment for why.
+    ///   Defaults to false so registered-only perks (e.g. 4K) stay available; callers
+    ///   fall back to `anonymous: true` only once a logged-in fetch's URLs actually
+    ///   fail to play.
+    func stream(mediaId: Int, translationId: Int, season: Int?, episode: Int?, anonymous: Bool = false) async throws -> StreamMedia {
+        let request = streamRequest(mediaId: mediaId, translationId: translationId, season: season, episode: episode, anonymous: anonymous)
 
         let (data, response) = try await RezkaHTTPClient.shared.send(request)
         
@@ -185,7 +190,7 @@ struct MediaRezkaApi {
         return request
     }
     
-    private func streamRequest(mediaId: Int, translationId: Int, season: Int?, episode: Int?) -> URLRequest {
+    private func streamRequest(mediaId: Int, translationId: Int, season: Int?, episode: Int?, anonymous: Bool) -> URLRequest {
         var bodyComponents = URLComponents()
         var additionalData = [URLQueryItem]()
         
@@ -202,12 +207,28 @@ struct MediaRezkaApi {
         
         bodyComponents.queryItems?.append(contentsOf: additionalData)
         
-        var request = URLRequest(url: URL(string: "\(RezkaConstantsApi.server)/ajax/get_cdn_series/")!)
+        let streamURL = URL(string: "\(RezkaConstantsApi.server)/ajax/get_cdn_series/")!
+        var request = URLRequest(url: streamURL)
         request.httpMethod = ApiConstants.HttpMethod.post.rawValue
         request.httpBody = bodyComponents.query?.data(using: .utf8)
         request.setValue(ApiConstants.userAgent, forHTTPHeaderField: ApiConstants.userAgentKey)
         request.addValue(ApiConstants.formContentType, forHTTPHeaderField: ApiConstants.contentTypeKey)
         request.addValue(ApiConstants.AcceptTypeJson, forHTTPHeaderField: ApiConstants.AcceptTypeKey)
+
+        // Fetch the actual stream token without the signed-in account attached — a
+        // logged-in, non-premium account gets a CDN redirect that 404s where an
+        // anonymous request for the exact same content succeeds. Only used as a
+        // fallback once a normal (logged-in) fetch's URLs fail to actually play, since
+        // staying logged in keeps registered-only perks (e.g. 4K) available when it
+        // does work. Watch history / other account features are unaffected: they go
+        // through separate requests that still carry the full session regardless.
+        if anonymous, let host = streamURL.host {
+            request.httpShouldHandleCookies = false
+            if let cookieHeader = RezkaAuthApi.anonymousCookieHeader(forHost: host) {
+                request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
+            }
+        }
+
         return request
     }
 }

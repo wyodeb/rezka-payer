@@ -12,7 +12,7 @@ private struct StreamData: Codable {
     let success: Bool
     let message: String
     let url: String?
-    let quality: String
+    let quality: String?
     let subtitle: String?
     let subtitlesList: [String: String]?
     let subtitleDefault: String?
@@ -30,11 +30,11 @@ private struct StreamData: Codable {
         success = try values.decode(Bool.self, forKey: .success)
         message = try values.decode(String.self, forKey: .message)
         url = try? values.decode(String.self, forKey: .url) // Changed to try? for safety
-        quality = try values.decode(String.self, forKey: .quality)
+        quality = try? values.decode(String.self, forKey: .quality) // absent when success == false
         subtitle = try? values.decode(String.self, forKey: .subtitle)
         subtitlesList = try? values.decode([String: String].self, forKey: .subtitlesList)
         subtitleDefault = try? values.decode(String.self, forKey: .subtitleDefault)
-        thumbnails = try values.decode(String.self, forKey: .thumbnails)
+        thumbnails = (try? values.decode(String.self, forKey: .thumbnails)) ?? ""
     }
 }
 
@@ -102,21 +102,58 @@ struct StreamMedia: Codable {
         self.p360 = p360
     }
     
+    /// Priority order the site itself falls back through, highest quality first.
+    static let qualityFallbackOrder: [Media.Quality] = [.p1080u, .p1080, .p720, .p480, .p360]
+
     func stream(_ quality: Media.Quality) -> String? {
+        mirrors(quality).first
+    }
+
+    /// Every distinct CDN mirror URL the site offered for `quality` (e.g.
+    /// voidcrystal.org, stream.voidboost.one, ...), in the order the site listed
+    /// them. A single mirror's signed token can be dead for a given title/quality
+    /// even though the others work, so playback should try each of these before
+    /// giving up.
+    ///
+    /// Each real mirror is actually listed *twice* — once as an HLS URL
+    /// (`.../file.mp4:hls:manifest.m3u8`) and once as the same token as a bare
+    /// progressive `.../file.mp4` — not as independent fallbacks. The site's own
+    /// reference client (github.com/SuperZombi/HdRezkaApi) only ever uses the
+    /// plain `.mp4` form and discards the `:hls:` one outright, so that's almost
+    /// certainly the one this CDN actually serves reliably; this collapses each
+    /// pair down to that one entry instead of the HLS form we'd previously guessed at.
+    func mirrors(_ quality: Media.Quality) -> [String] {
+        let raw: [String]
         switch quality {
-        case .p1080u:
-            return p1080u?.first
-        case .p1080:
-            return p1080?.first
-        case .p720:
-            return p720?.first
-        case .p480:
-            return p480?.first
-        case .p360:
-            return p360?.first
-        case .unknown:
-            return nil
+        case .p1080u: raw = p1080u ?? []
+        case .p1080: raw = p1080 ?? []
+        case .p720: raw = p720 ?? []
+        case .p480: raw = p480 ?? []
+        case .p360: raw = p360 ?? []
+        case .unknown: raw = []
         }
+        return Self.dedupedPreferringProgressiveMP4(raw)
+    }
+
+    private static func dedupedPreferringProgressiveMP4(_ urls: [String]) -> [String] {
+        var order: [String] = []
+        var chosen: [String: String] = [:]
+        for url in urls {
+            let key = url.replacingOccurrences(of: ":hls:manifest.m3u8", with: "")
+            if chosen[key] == nil {
+                order.append(key)
+                chosen[key] = url
+            } else if !url.contains(":hls:manifest.m3u8") {
+                chosen[key] = url
+            }
+        }
+        return order.compactMap { chosen[$0] }
+    }
+
+    /// The next quality down worth trying once every mirror of `quality` has failed.
+    func nextLowerQuality(after quality: Media.Quality) -> Media.Quality? {
+        guard let index = Self.qualityFallbackOrder.firstIndex(of: quality) else { return nil }
+        return Self.qualityFallbackOrder[(index + 1)...].first { !mirrors($0).isEmpty }
     }
     
     func alternativeStream(_ quality: Media.Quality) -> String? {
@@ -242,6 +279,12 @@ struct StreamRezkaApiResponse: Decodable {
         
         let counts = "p1080u=\(p1080u?.count ?? 0) p1080=\(p1080?.count ?? 0) p720=\(p720?.count ?? 0) p480=\(p480?.count ?? 0) p360=\(p360?.count ?? 0)"
         print("ℹ️ Parsed stream qualities: \(counts)")
+        if let first480 = p480?.first {
+            print("ℹ️ FULL p480 URL[0]: \(first480)")
+        }
+        if let first360 = p360?.first {
+            print("ℹ️ FULL p360 URL[0]: \(first360)")
+        }
         if (p1080u ?? []).isEmpty && (p1080 ?? []).isEmpty && (p720 ?? []).isEmpty && (p480 ?? []).isEmpty && (p360 ?? []).isEmpty {
             print("⚠️ After cleanup the payload yielded zero qualities. First 300 chars of cleanedBase64: \(String(cleanedBase64.prefix(300)))")
         }

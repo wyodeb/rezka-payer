@@ -46,19 +46,20 @@ struct DetailedMediaRezkaAPIResponse: Decodable {
         
         let img = try coverElement?.getElementsByTag("img").first?.attr("src") ?? ""
         
-        let translation = try DetailedMediaRezkaAPIResponse.translations(in: doc, default: defaultTranslation)
-        
-        detailedMedia = DetailedMedia(mediaId: Int(mediaId)!, title: title, titleOriginal: originalTitle, info: info, description: desc, translations: translation, seasons: [:], coverUrl: img)
+        let (translation, premiumTranslations) = try DetailedMediaRezkaAPIResponse.translations(in: doc, default: defaultTranslation)
+
+        detailedMedia = DetailedMedia(mediaId: Int(mediaId)!, title: title, titleOriginal: originalTitle, info: info, description: desc, translations: translation, premiumTranslations: premiumTranslations, seasons: [:], coverUrl: img)
     }
-    
-    private static func translations(in doc: Document, default translation: String) throws -> OrderedDictionary<Int, String> {
+
+    private static func translations(in doc: Document, default translation: String) throws -> (OrderedDictionary<Int, String>, Set<Int>) {
         var translations: OrderedDictionary<Int, String> = [:]
-        
+        var premium: Set<Int> = []
+
         let scripts = try doc.getElementsByTag("script")
-        
+
         scripts.forEach { element in
             let script = element.data()
-            
+
             for search in ["initCDNSeriesEvents", "initCDNMoviesEvents"] {
                 if let pos = script.firstRange(of: search) {
                     let startIndex = script.index(pos.upperBound, offsetBy: 1)
@@ -70,15 +71,31 @@ struct DetailedMediaRezkaAPIResponse: Decodable {
                 }
             }
         }
-        
-        let list = try doc.getElementsByClass("b-translators__list").first?.getElementsByTag("li")
-        try list?.forEach({ translationElement in
-            let title = try translationElement.attr("title")
-            let id = Int(try translationElement.attr("data-translator_id")) ?? 0
-            
+
+        // The site serves at least two different markups for this list depending on
+        // the title (confirmed against live pages, not guessed):
+        //   <li><a title="Дубляж" class="b-translator__items" data-translator_id="56"
+        //       ...>Дубляж</a></li>                              (e.g. Shawshank Redemption)
+        //   <li title="Дубляж" class="b-translator__item" data-translator_id="56"
+        //       ...>Дубляж</li>                                  (e.g. The Green Mile — no
+        //                                                         nested <a> at all)
+        // Rather than assume which tag/class carries the attributes, match any element
+        // with a data-translator_id at all and read from that same element — works for
+        // both variants. Matching only "b-translator__items" (as this code previously
+        // did) reads title/data-translator_id off the childless <li> in the second
+        // variant, always empty, silently collapsing every translator into one bogus
+        // entry and falling back to the single combined-name entry from the info table.
+        try doc.getElementById("translators-list")?.select("[data-translator_id]").forEach({ node in
+            guard let id = Int(try node.attr("data-translator_id")) else { return }
+            let title = try node.attr("title")
+
             translations[id] = title
+            let isPremium = try node.hasClass("b-prem_translator") || (try node.parent()?.hasClass("b-prem_translator")) == true
+            if isPremium {
+                premium.insert(id)
+            }
         })
-        
-        return translations
+
+        return (translations, premium)
     }
 }

@@ -75,6 +75,7 @@
 		A9EF525263A81E7F01810E99 /* RezkaHTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58D10D6D6D7D9EE92CBEA03C /* RezkaHTTPClient.swift */; };
 		B1WH000000000001 /* WatchHistoryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1WH000000000002 /* WatchHistoryEntry.swift */; };
 		B1WH000000000003 /* WatchHistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1WH000000000004 /* WatchHistoryViewModel.swift */; };
+		B1WH000000000005 /* RezkaStreamResourceLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1WH000000000006 /* RezkaStreamResourceLoader.swift */; };
 		C9633C74D0D86269A1A5D1BD /* TopShelfSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 064829D5251960F22DBBDE94 /* TopShelfSnapshot.swift */; };
 		CED8F94E9181F46C0D5A5F88 /* RezkaTopShelf.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2AC96DCDFC081B5361058B57 /* RezkaTopShelf.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -176,6 +177,7 @@
 		A5THM11151AA00000000001 /* RezkaTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RezkaTheme.swift; sourceTree = "<group>"; };
 		B1WH000000000002 /* WatchHistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHistoryEntry.swift; sourceTree = "<group>"; };
 		B1WH000000000004 /* WatchHistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHistoryViewModel.swift; sourceTree = "<group>"; };
+		B1WH000000000006 /* RezkaStreamResourceLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RezkaStreamResourceLoader.swift; sourceTree = "<group>"; };
 		C3C73D4E30E686F2658EC30E /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
 
@@ -298,6 +300,7 @@
 			isa = PBXGroup;
 			children = (
 				A559FEA329117EEE0004380B /* PlayerViewController.swift */,
+				B1WH000000000006 /* RezkaStreamResourceLoader.swift */,
 			);
 			path = Player;
 			sourceTree = "<group>";
@@ -651,6 +654,7 @@
 				A57D2DBF28AEB39D00E98298 /* DataStore.swift in Sources */,
 				A598C18628B2A5670034717C /* CacheImplementation.swift in Sources */,
 				A559FEA629117EEE0004380B /* PlayerViewController.swift in Sources */,
+				B1WH000000000005 /* RezkaStreamResourceLoader.swift in Sources */,
 				A5A741BE2902DBCD00B884F7 /* CategoryView.swift in Sources */,
 				A5A741DF2902EB3E00B884F7 /* Strings+Filter.swift in Sources */,
 				A50D8FF028ABF9A3008C66AA /* MediaHistoryView.swift in Sources */,

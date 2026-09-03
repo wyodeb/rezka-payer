@@ -33,6 +33,7 @@ class DetailedMediaItemViewModel: ObservableObject {
             info: [:],
             description: media.description ?? media.descriptionShort,
             translations: [:],
+            premiumTranslations: [],
             seasons: [:],
             coverUrl: media.coverUrl
         )
@@ -93,6 +94,16 @@ class DetailedMediaItemViewModel: ObservableObject {
     var stream: String {
         streams?.stream(currentQuality) ?? ""
     }
+
+    /// Every CDN mirror for the current quality, in fallback order. Used by the
+    /// player to retry a dead mirror/token instead of failing outright.
+    func streamMirrors(startingAt quality: Media.Quality? = nil) -> [String] {
+        streams?.mirrors(quality ?? currentQuality) ?? []
+    }
+
+    func nextLowerQuality(after quality: Media.Quality) -> Media.Quality? {
+        streams?.nextLowerQuality(after: quality)
+    }
     
     func loadDetailedMedia() async {
         if Task.isCancelled { return }
@@ -111,7 +122,7 @@ class DetailedMediaItemViewModel: ObservableObject {
             let detailedMedia = try await rezkaAPI.fetchDetails(from: media)
             if Task.isCancelled { return }
             
-            guard let currentTranslationId = detailedMedia.translations.keys.first else {
+            guard let currentTranslationId = detailedMedia.preferredTranslationId else {
                 phase = .failure(DataError.generate(for: .rezkaConstantsApi, error: .empty))
                 return
             }
@@ -143,6 +154,10 @@ class DetailedMediaItemViewModel: ObservableObject {
     
     var translations: OrderedDictionary<Int, String> {
         detailedMedia.translations
+    }
+
+    func isPremiumTranslation(_ id: Int) -> Bool {
+        detailedMedia.premiumTranslations.contains(id)
     }
     
     var season: SeasonsData? {
@@ -184,6 +199,28 @@ class DetailedMediaItemViewModel: ObservableObject {
         phase = .success(detailedMedia)
     }
     
+    /// Re-fetches the current translation/quality's stream token without the signed-in
+    /// account attached — a fallback for once a normal (logged-in) fetch's URLs have
+    /// actually failed to play, not tried up front, so registered-only perks like 4K
+    /// stay available whenever the logged-in fetch does work. Returns whether it
+    /// produced any playable mirror at all.
+    func refetchStreamAnonymously() async -> Bool {
+        guard let refetched = try? await rezkaAPI.stream(
+            mediaId: detailedMedia.mediaId,
+            translationId: currentTranslation,
+            season: currentSeason,
+            episode: currentEpisode,
+            anonymous: true
+        ) else { return false }
+
+        streams = refetched
+        let available = refetched.qualities ?? []
+        if currentQuality == .unknown || !available.contains(currentQuality) {
+            currentQuality = refetched.bestQualityId
+        }
+        return !streamMirrors().isEmpty
+    }
+
     private func updateStreams(of mediaId: Int) async throws {
         streams = try await rezkaAPI.stream(mediaId: mediaId, translationId: currentTranslation, season: currentSeason, episode: currentEpisode)
 
